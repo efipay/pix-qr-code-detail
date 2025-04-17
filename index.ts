@@ -1,3 +1,41 @@
+/* ---------- tabelas tiradas do Manual do BR Code --------- */
+const ROOT_NAMES: Record<string, string> = {
+  '00': 'Payload Format Indicator',
+  '01': 'Point of Initiation Method',
+  // 26‑51 → template, tratado adiante
+  '52': 'Merchant Category Code',
+  '53': 'Transaction Currency',
+  '54': 'Transaction Amount',
+  '58': 'Country Code',
+  '59': 'Merchant Name',
+  '60': 'Merchant City',
+  '61': 'Postal Code',
+  '62': 'Additional Data Field Template',
+  '63': 'CRC‑16'
+};
+
+const MAI_NAMES: Record<string, string> = {        // dentro de 26‑51
+  '00': 'Globally Unique Identifier',
+  '01': 'Chave Pix',
+  '02': 'Informações Adicionais',
+  '25': 'URL do Payload'
+};
+
+const ADD_DATA_NAMES: Record<string, string> = {   // dentro de 62
+  '05': 'Reference Label'
+};
+
+function getTagName(tag: string, parent?: string | null): string | undefined {
+  if (!parent) {                                   // nível raiz
+    if (+tag >= 26 && +tag <= 51) return 'Merchant Account Information';
+    return ROOT_NAMES[tag];
+  }
+
+  if (+parent >= 26 && +parent <= 51) return MAI_NAMES[tag];
+  if (parent === '62')            return ADD_DATA_NAMES[tag];
+  return undefined;                                   // não definido
+}
+
 import axios from 'axios';
 import jwt, {
   Jwt, 
@@ -6,31 +44,43 @@ import jwt, {
 } from 'jsonwebtoken';
 
 export interface TLV {
-  tag: string;           
-  length: number;         
-  value: string;          
-  children?: TLV[];       
+  tag: string;
+  length: number;
+  value: string;
+  tagName?: string;
+  children?: TLV[];
 }
 
-export function parseTLV(data: string, start = 0, end = data.length): TLV[] {
+export function parseTLV(
+  data: string,
+  start = 0,
+  end: number = data.length,
+  parent: string | null = null
+): TLV[] {
   const out: TLV[] = [];
   let i = start;
 
-  while (i + 4 <= end) {                
-    const tag = data.slice(i, i + 2);
-    const length = Number(data.slice(i + 2, i + 4));   
-    const valueStart = i + 4;
-    const valueEnd   = valueStart + length;
-    const value = data.slice(valueStart, valueEnd);
-    const element: TLV = { tag, length, value };
+  while (i + 4 <= end) {
+    const tag    = data.slice(i, i + 2);
+    const length = Number(data.slice(i + 2, i + 4));
+    const value  = data.slice(i + 4, i + 4 + length);
 
-    const tagNum = Number(tag);
-    const isNested =
-      (tagNum >= 0 && tagNum <= 51) || tag === '62' || tag === '64';
-    if (isNested) element.children = parseTLV(value);
+    const element: TLV = {
+      tag,
+      length,
+      value,
+      tagName: getTagName(tag, parent)
+    };
+
+    /* apenas 26‑51, 62 ou 64 são templates */
+    const tagNum  = Number(tag);
+    const nested  =
+      (tagNum >= 26 && tagNum <= 51) || tag === '62' || tag === '64';
+
+    if (nested) element.children = parseTLV(value, 0, value.length, tag);
 
     out.push(element);
-    i = valueEnd;
+    i += 4 + length;
   }
   return out;
 }

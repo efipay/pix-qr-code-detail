@@ -24,10 +24,39 @@ npm i pix-qr-code-detail
 ```
 
 O pacote publica CJS e ESM automaticamente, basta usar:
+
 ```js
 // CommonJS
-const { getDecodedPixJwt } = require('pix-qr-code-detail');
+const { getDecodedPixJwt } = require("pix-qr-code-detail");
 
 // ESM / TypeScript
-import { getDecodedPixJwt } from 'pix-qr-code-detail';
+import { getDecodedPixJwt } from "pix-qr-code-detail";
+```
+
+Além da função `getDecodedPixJwt` são exportadas também `parseTLV` e `extractPixUrl`
+
+**`parseTLV`**: Converte a string do BR Code em um array de objetos TLV. Cada item traz: tag, length, value, tagName (nome oficial segundo o manual do BR Code) e, quando aplicável, children com TLVs aninhados.
+
+**`extractPixUrl`**: Varre o BR Code e devolve apenas o valor da sub‑tag 25 (URL do Payload) dentro do Merchant Account Information (tags 26‑51). Se não existir, devolve undefined.
+
+**`getDecodedPixJwt`**: Usa extractPixUrl para obter a URL, baixa o token JWT (GET + Accept: application/jwt) e devolve o header, o payload e a signature já decodificados via jsonwebtoken.decode() (opção { complete: true }).
+
+## Exemplo
+```js
+import { parseTLV, extractPixUrl, getDecodedPixJwt } from 'pix-qr-code-detail';
+
+const brcode = '00020101021226830014BR.GOV.BCB.PIX2561qrcodespix.sejaefi.com.br/v2/ff719c748dc244a294adee9174ace3795204000053039865802BR5905EFISA6008SAOPAULO62070503***6304BAC4';
+
+// 1. Listar campos do QR‑Code
+console.dir(parseTLV(brcode), { depth: null });
+
+// 2. Pegar só a URL do payload
+console.log('URL:', extractPixUrl(brcode));
+
+// 3. Baixar e decodificar o JWT Pix
+(async () => {
+  const { payload } = await getDecodedPixJwt(brcode);
+  console.log('Payload JWT:', payload);
+})();
+
 ```
