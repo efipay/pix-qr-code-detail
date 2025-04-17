@@ -1,0 +1,35 @@
+{
+  "name": "pix-qr-code-detail",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./index.cjs",
+  "types": "./dist/index.d.ts",
+  "description": "",
+  "exports": {
+    "require": "./index.cjs",
+    "import": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "index.cjs"
+  ],
+  "dependencies": {
+    "axios": "^1.8.4",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "Pix",
+    "BRCode",
+    "Efí Bank",
+    "Detalhar Pix"
+  ],
+  "author": "João Lucas Alberto Muniz",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}
